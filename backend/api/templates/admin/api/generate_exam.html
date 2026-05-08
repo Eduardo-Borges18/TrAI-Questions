@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerar Prova com IA</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0f1a;color:#e2e8f0;min-height:100vh;padding:2rem 1rem}
+.page{max-width:860px;margin:0 auto}
+.top-bar{display:flex;align-items:center;gap:1rem;margin-bottom:2rem}
+.back-link{color:#94a3b8;text-decoration:none;font-size:.9rem;display:flex;align-items:center;gap:.4rem;transition:color .2s}
+.back-link:hover{color:#fff}
+.page-title{font-size:1.8rem;font-weight:800;background:linear-gradient(135deg,#F97316,#fb923c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+/* Steps indicator */
+.steps{display:flex;gap:.5rem;margin-bottom:2.5rem}
+.step{flex:1;height:4px;border-radius:100px;background:#1e293b;transition:background .4s}
+.step.active{background:#F97316}
+.step.done{background:#22c55e}
+/* Cards */
+.card{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:2rem;margin-bottom:1.5rem}
+.card h2{font-size:1.3rem;font-weight:700;margin-bottom:.35rem;color:#f8fafc}
+.card .subtitle{color:#94a3b8;font-size:.9rem;margin-bottom:1.5rem}
+/* Inputs */
+label{display:block;font-size:.85rem;font-weight:600;color:#94a3b8;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em}
+input[type=text],input[type=number],textarea,select{width:100%;background:#0f172a;border:2px solid #334155;border-radius:10px;padding:.75rem 1rem;color:#f1f5f9;font-family:inherit;font-size:.95rem;outline:none;transition:border-color .2s,box-shadow .2s}
+input:focus,textarea:focus,select:focus{border-color:#F97316;box-shadow:0 0 0 3px rgba(249,115,22,.15)}
+select option{background:#1e293b}
+textarea{resize:vertical;min-height:90px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+.form-group{margin-bottom:1rem}
+/* Question spec cards */
+.q-spec-card{background:#0f172a;border:1px solid #334155;border-radius:12px;padding:1.25rem;margin-bottom:.9rem;position:relative}
+.q-spec-card .q-num{position:absolute;top:-10px;left:16px;background:#F97316;color:#fff;font-size:.75rem;font-weight:700;padding:.15rem .55rem;border-radius:100px}
+.q-spec-card .spec-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.75rem}
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.8rem 1.75rem;border-radius:10px;font-weight:700;font-size:.95rem;cursor:pointer;border:none;font-family:inherit;transition:all .2s}
+.btn-primary{background:linear-gradient(135deg,#F97316,#ea580c);color:#fff;box-shadow:0 4px 14px rgba(249,115,22,.3)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(249,115,22,.4)}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-secondary{background:#1e293b;color:#94a3b8;border:1px solid #334155}
+.btn-secondary:hover{color:#f1f5f9;border-color:#64748b}
+.btn-success{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff}
+.btn-danger{background:#ef4444;color:#fff;font-size:.8rem;padding:.4rem .8rem}
+.actions{display:flex;gap:1rem;justify-content:flex-end;margin-top:1.5rem;flex-wrap:wrap}
+/* Loading */
+.loading-screen{text-align:center;padding:4rem 2rem}
+.spinner-lg{width:70px;height:70px;border:6px solid #1e293b;border-top:6px solid #F97316;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 2rem}
+.loading-title{font-size:1.6rem;font-weight:800;margin-bottom:.5rem}
+.loading-sub{color:#64748b;font-size:.95rem}
+.progress-steps{display:flex;flex-direction:column;gap:.5rem;margin-top:2rem;text-align:left;max-width:300px;margin-left:auto;margin-right:auto}
+.p-step{display:flex;align-items:center;gap:.75rem;font-size:.9rem;color:#64748b;transition:color .3s}
+.p-step.active{color:#F97316;font-weight:600}
+.p-step.done{color:#22c55e}
+.p-step .dot{width:10px;height:10px;border-radius:50%;background:currentColor;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Review */
+.review-q{background:#0f172a;border:1px solid #334155;border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+.review-q-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem}
+.review-q-num{background:#F97316;color:#fff;font-size:.75rem;font-weight:700;padding:.2rem .6rem;border-radius:100px}
+.badges{display:flex;gap:.4rem}
+.badge{font-size:.72rem;font-weight:600;padding:.2rem .55rem;border-radius:100px}
+.badge-diff{background:#1e293b;border:1px solid #334155;color:#94a3b8}
+.badge-type-d{background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3)}
+.badge-type-f{background:rgba(249,115,22,.15);color:#fb923c;border:1px solid rgba(249,115,22,.3)}
+.review-q-statement{font-size:.95rem;line-height:1.6;color:#e2e8f0;margin-bottom:.75rem}
+.alternatives-preview{display:flex;flex-direction:column;gap:.4rem;margin-top:.5rem}
+.alt-item{display:flex;gap:.75rem;font-size:.875rem;color:#94a3b8;padding:.5rem;border-radius:8px;background:#1e293b}
+.alt-item.correct{background:rgba(34,197,94,.1);color:#4ade80}
+.alt-letter{font-weight:700;flex-shrink:0}
+.edit-area{margin-top:.75rem;display:none}
+.edit-area textarea{min-height:70px}
+/* Success */
+.success-screen{text-align:center;padding:3rem 1rem}
+.success-icon{font-size:4rem;margin-bottom:1rem}
+.success-title{font-size:1.8rem;font-weight:800;color:#22c55e;margin-bottom:.5rem}
+/* Hidden */
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="top-bar">
+    <a href="../" class="back-link">← Voltar para Provas</a>
+  </div>
+
+  <div class="steps" id="steps">
+    <div class="step active" id="step-ind-1"></div>
+    <div class="step" id="step-ind-2"></div>
+    <div class="step" id="step-ind-3"></div>
+    <div class="step" id="step-ind-4"></div>
+  </div>
+
+  <!-- ── STEP 1: Info da Prova ─────────────────────────── -->
+  <div id="screen-1">
+    <div class="card">
+      <h2>📋 Informações da Prova</h2>
+      <p class="subtitle">Configure o básico antes de especificar as questões.</p>
+
+      <div class="form-group">
+        <label>Título da Prova</label>
+        <input type="text" id="exam-title" placeholder="Ex: Avaliação de História — 2º Bimestre">
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Disciplina / Assunto</label>
+          <input type="text" id="exam-subject" placeholder="Ex: História do Brasil">
+        </div>
+        <div>
+          <label>Nº de Questões</label>
+          <input type="number" id="exam-count" value="5" min="1" max="20">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descrição para o aluno (opcional)</label>
+        <textarea id="exam-desc" placeholder="Instruções gerais que o aluno verá antes de começar..."></textarea>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="goStep2()">Configurar Questões →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 2: Specs por questão ─────────────────────── -->
+  <div id="screen-2" class="hidden">
+    <div class="card">
+      <h2>💬 Especifique cada questão</h2>
+      <p class="subtitle">Descreva o que a IA deve abordar em cada questão. Seja específico!</p>
+      <div id="q-specs-container"></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="goScreen(1)">← Voltar</button>
+      <button class="btn btn-primary" id="btn-generate" onclick="generateExam()">⚡ Gerar Prova com IA</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 3: Loading ────────────────────────────────── -->
+  <div id="screen-3" class="hidden">
+    <div class="card loading-screen">
+      <div class="spinner-lg"></div>
+      <div class="loading-title">IA está gerando sua prova...</div>
+      <div class="loading-sub">Isso pode levar alguns segundos</div>
+      <div class="progress-steps">
+        <div class="p-step active" id="ps-1"><span class="dot"></span> Processando especificações</div>
+        <div class="p-step" id="ps-2"><span class="dot"></span> Criando enunciados</div>
+        <div class="p-step" id="ps-3"><span class="dot"></span> Gerando rubricas de correção</div>
+        <div class="p-step" id="ps-4"><span class="dot"></span> Finalizando prova</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 4: Revisão ────────────────────────────────── -->
+  <div id="screen-4" class="hidden">
+    <div class="card">
+      <h2>✅ Revise a Prova Gerada</h2>
+      <p class="subtitle">Confira as questões. Você pode editar os enunciados antes de salvar.</p>
+      <div id="review-container"></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="goStep2()">↺ Regerar</button>
+      <button class="btn btn-primary" id="btn-save" onclick="saveExam()">💾 Salvar Prova</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 5: Sucesso ────────────────────────────────── -->
+  <div id="screen-5" class="hidden">
+    <div class="card success-screen">
+      <div class="success-icon">🎉</div>
+      <div class="success-title">Prova salva com sucesso!</div>
+      <p style="color:#64748b;margin:.5rem 0 2rem">A prova foi criada e está aguardando publicação.</p>
+      <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+        <a href="../" class="btn btn-success">📋 Ir para Minhas Provas</a>
+        <button class="btn btn-secondary" onclick="resetWizard()">+ Criar Outra Prova</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = '/api';
+let generatedQuestions = [];
+let savedExamId = null;
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function goScreen(n) {
+  [1,2,3,4,5].forEach(i => {
+    document.getElementById('screen-'+i).classList.add('hidden');
+    const ind = document.getElementById('step-ind-'+i);
+    if (ind) ind.className = 'step';
+  });
+  document.getElementById('screen-'+n).classList.remove('hidden');
+  // Activate steps up to n
+  for(let i=1; i<=4; i++){
+    const ind = document.getElementById('step-ind-'+i);
+    if(!ind) continue;
+    if(i < n) ind.className = 'step done';
+    else if(i === n) ind.className = 'step active';
+  }
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function getVal(id){ return document.getElementById(id)?.value?.trim() || ''; }
+
+// ── Step 1 → 2 ───────────────────────────────────────────────────────────────
+
+function goStep2() {
+  const title = getVal('exam-title');
+  const count = parseInt(document.getElementById('exam-count').value) || 5;
+  if(!title){ alert('Informe o título da prova.'); return; }
+
+  const container = document.getElementById('q-specs-container');
+  container.innerHTML = '';
+
+  for(let i=1; i<=count; i++){
+    container.innerHTML += `
+      <div class="q-spec-card" id="spec-${i}">
+        <span class="q-num">Questão ${i}</span>
+        <div class="form-group" style="margin-top:.5rem">
+          <label>O que abordar nesta questão?</label>
+          <textarea id="spec-content-${i}" placeholder="Ex: As causas da Revolução Industrial e seus efeitos socioeconômicos..."></textarea>
+        </div>
+        <div class="spec-row">
+          <div>
+            <label>Dificuldade</label>
+            <select id="spec-diff-${i}">
+              <option value="facil">Fácil</option>
+              <option value="medio" selected>Médio</option>
+              <option value="dificil">Difícil</option>
+            </select>
+          </div>
+          <div>
+            <label>Tipo de Questão</label>
+            <select id="spec-type-${i}">
+              <option value="dissertativa">Dissertativa</option>
+              <option value="fechada">Fechada (Múltipla Escolha)</option>
+            </select>
+          </div>
+        </div>
+      </div>`;
+  }
+  goScreen(2);
+}
+
+// ── Step 2 → 3 → 4 ───────────────────────────────────────────────────────────
+
+async function generateExam() {
+  const title   = getVal('exam-title');
+  const subject = getVal('exam-subject');
+  const count   = parseInt(document.getElementById('exam-count').value) || 5;
+
+  const specs = [];
+  for(let i=1; i<=count; i++){
+    const content = getVal(`spec-content-${i}`);
+    if(!content){ alert(`Preencha o conteúdo da Questão ${i}.`); return; }
+    specs.push({
+      content,
+      difficulty: document.getElementById(`spec-diff-${i}`).value,
+      type:       document.getElementById(`spec-type-${i}`).value,
+    });
+  }
+
+  goScreen(3);
+  animateProgressSteps();
+
+  try {
+    const res = await fetch(`${API}/generate-exam/`, {
+      method:  'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body:    JSON.stringify({ title, subject, questions_specs: specs }),
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Erro ao gerar.');
+
+    generatedQuestions = data.questions || [];
+    renderReview(title, subject);
+    goScreen(4);
+  } catch(e) {
+    goScreen(2);
+    alert('❌ ' + e.message);
+  }
+}
+
+function animateProgressSteps() {
+  const delays = [0, 1500, 3000, 5000];
+  ['ps-1','ps-2','ps-3','ps-4'].forEach((id, i) => {
+    setTimeout(() => {
+      if(i > 0) document.getElementById(['ps-1','ps-2','ps-3','ps-4'][i-1]).className = 'p-step done';
+      document.getElementById(id).className = 'p-step active';
+    }, delays[i]);
+  });
+}
+
+// ── Renderizar revisão ────────────────────────────────────────────────────────
+
+function renderReview(title, subject) {
+  const c = document.getElementById('review-container');
+  c.innerHTML = `<p style="color:#94a3b8;font-size:.85rem;margin-bottom:1.25rem">
+    <strong style="color:#f1f5f9">${title}</strong>${subject ? ' — ' + subject : ''}
+  </p>`;
+
+  generatedQuestions.forEach((q, idx) => {
+    const typeClass = q.question_type === 'dissertativa' ? 'badge-type-d' : 'badge-type-f';
+    const typeLabel = q.question_type === 'dissertativa' ? 'Dissertativa' : 'Múltipla Escolha';
+    const diffLabels = {facil:'Fácil', medio:'Médio', dificil:'Difícil'};
+
+    let altsHtml = '';
+    if (q.alternatives && q.alternatives.length) {
+      altsHtml = `<div class="alternatives-preview">`;
+      q.alternatives.forEach(a => {
+        altsHtml += `<div class="alt-item ${a.is_correct?'correct':''}">
+          <span class="alt-letter">${a.letter}</span>
+          <span>${a.text}</span>
+          ${a.is_correct ? '<span style="margin-left:auto;font-size:.75rem">✓ correta</span>' : ''}
+        </div>`;
+      });
+      altsHtml += `</div>`;
+    }
+
+    c.innerHTML += `
+      <div class="review-q" id="rq-${idx}">
+        <div class="review-q-header">
+          <span class="review-q-num">Q${idx+1}</span>
+          <div class="badges">
+            <span class="badge badge-diff">${diffLabels[q.difficulty]||q.difficulty}</span>
+            <span class="badge ${typeClass}">${typeLabel}</span>
+          </div>
+          <button class="btn btn-secondary" style="font-size:.8rem;padding:.35rem .9rem"
+            onclick="toggleEdit(${idx})">✏️ Editar</button>
+        </div>
+        <div class="review-q-statement" id="stmt-display-${idx}">${q.statement}</div>
+        ${altsHtml}
+        <div class="edit-area" id="edit-area-${idx}">
+          <label style="margin-top:.5rem">Editar Enunciado</label>
+          <textarea id="edit-stmt-${idx}">${q.statement}</textarea>
+          <button class="btn btn-primary" style="margin-top:.5rem;font-size:.85rem;padding:.5rem 1rem"
+            onclick="saveEdit(${idx})">Salvar Edição</button>
+        </div>
+      </div>`;
+  });
+}
+
+function toggleEdit(idx) {
+  const area = document.getElementById(`edit-area-${idx}`);
+  area.style.display = area.style.display === 'block' ? 'none' : 'block';
+}
+
+function saveEdit(idx) {
+  const newStmt = document.getElementById(`edit-stmt-${idx}`).value.trim();
+  if(!newStmt) return;
+  generatedQuestions[idx].statement = newStmt;
+  document.getElementById(`stmt-display-${idx}`).textContent = newStmt;
+  document.getElementById(`edit-area-${idx}`).style.display = 'none';
+}
+
+// ── Salvar prova ──────────────────────────────────────────────────────────────
+
+async function saveExam() {
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  try {
+    const res = await fetch(`${API}/save-exam/`, {
+      method:  'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify({
+        title:       getVal('exam-title'),
+        subject:     getVal('exam-subject'),
+        description: getVal('exam-desc'),
+        questions:   generatedQuestions,
+      }),
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Erro ao salvar.');
+    savedExamId = data.id;
+    goScreen(5);
+  } catch(e) {
+    alert('❌ ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '💾 Salvar Prova';
+  }
+}
+
+function resetWizard() {
+  generatedQuestions = [];
+  savedExamId = null;
+  document.getElementById('exam-title').value = '';
+  document.getElementById('exam-subject').value = '';
+  document.getElementById('exam-desc').value = '';
+  document.getElementById('exam-count').value = '5';
+  goScreen(1);
+}
+</script>
+</body>
+</html>
