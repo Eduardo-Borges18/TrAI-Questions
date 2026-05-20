@@ -21,12 +21,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-8wg)p+$dnx8d&a9j=l2d0y=$ndqj$h6v9dxik-1pa-v6tk*m0t'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-8wg)p+$dnx8d&a9j=l2d0y=$ndqj$h6v9dxik-1pa-v6tk*m0t')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('RENDER', '') == ''
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    'app-backend-3bsg.onrender.com',
+    os.environ.get('RENDER_EXTERNAL_HOSTNAME', ''),
+]
 
 
 # Application definition
@@ -124,7 +129,13 @@ STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # CORS Configuration
-CORS_ALLOW_ALL_ORIGINS = True  # For development only
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOWED_ORIGINS = [
+        'http://localhost:5173',
+        'https://app-frontend-7nug.onrender.com',
+    ]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
