@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: app-backend
+    env: python
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
+    startCommand: "gunicorn core.wsgi:application"
+    envVars:
+      - key: FRONTEND_URL
+        value: "https://app-frontend.onrender.com"
+      - key: ALLOWED_HOSTS
+        value: "*"
+
+  - type: static
+    name: app-frontend
+    rootDir: frontend
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: "./dist"
+    envVars:
+      - key: VITE_API_URL
+        value: "https://app-backend.onrender.com/api"

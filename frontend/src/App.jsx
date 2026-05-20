@@ -4,7 +4,7 @@ import HomePage from './pages/HomePage';
 import ExamPage from './pages/ExamPage';
 import './index.css';
 
-const API_BASE = 'http://127.0.0.1:8000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 
 function App() {
   const [view, setView] = useState('home'); // 'home' | 'exam'

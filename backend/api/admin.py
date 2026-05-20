@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.urls import path
 from django.shortcuts import render, redirect
-from django.contrib import messages
 from .models import Exam, Question, Alternative, Submission, Feedback
 
 
@@ -18,33 +17,48 @@ class QuestionInline(admin.StackedInline):
     model = Question
     extra = 0
     show_change_link = True
-    fields = ("order_num", "question_type", "difficulty", "statement", "rubric")
+    fields = (
+        "order_num",
+        "question_type",
+        "difficulty",
+        "statement",
+        "rubric")
     inlines = []   # alternativas ficam na página da questão
 
 
-# ── Question Admin ────────────────────────────────────────────────────────────
+# ── Question Admin ──────────────────────────────────────────────────────
 
 @admin.register(Question)
 class QuestionAdmin(admin.ModelAdmin):
-    list_display  = ("order_num", "exam", "question_type", "difficulty", "__str__")
-    list_filter   = ("exam", "question_type", "difficulty")
-    inlines       = [AlternativeInline]
+    list_display = (
+        "order_num",
+        "exam",
+        "question_type",
+        "difficulty",
+        "__str__")
+    list_filter = ("exam", "question_type", "difficulty")
+    inlines = [AlternativeInline]
     fieldsets = (
         ("Questão", {"fields": ("exam", "order_num", "question_type", "difficulty", "statement")}),
         ("Rubrica (uso interno da IA)", {"fields": ("rubric",), "classes": ("collapse",)}),
     )
 
 
-# ── Exam Admin ────────────────────────────────────────────────────────────────
+# ── Exam Admin ──────────────────────────────────────────────────────────
 
 @admin.register(Exam)
 class ExamAdmin(admin.ModelAdmin):
-    list_display         = ("title", "subject", "total_questions", "is_active", "created_at")
-    list_filter          = ("is_active",)
-    search_fields        = ("title", "subject")
-    list_editable        = ("is_active",)
-    readonly_fields      = ("created_at",)
-    inlines              = [QuestionInline]
+    list_display = (
+        "title",
+        "subject",
+        "total_questions",
+        "is_active",
+        "created_at")
+    list_filter = ("is_active",)
+    search_fields = ("title", "subject")
+    list_editable = ("is_active",)
+    readonly_fields = ("created_at",)
+    inlines = [QuestionInline]
     change_list_template = "admin/api/exam_changelist.html"
 
     def get_urls(self):
@@ -67,16 +81,16 @@ class ExamAdmin(admin.ModelAdmin):
         return render(request, "admin/api/generate_exam.html", context)
 
 
-# ── Submission / Feedback ─────────────────────────────────────────────────────
+# ── Submission / Feedback ───────────────────────────────────────────────
 
 @admin.register(Submission)
 class SubmissionAdmin(admin.ModelAdmin):
     list_display = ("id", "question", "exam", "submitted_at")
-    list_filter  = ("exam",)
+    list_filter = ("exam",)
     readonly_fields = ("submitted_at",)
 
 
 @admin.register(Feedback)
 class FeedbackAdmin(admin.ModelAdmin):
-    list_display  = ("id", "submission", "score", "generated_at")
+    list_display = ("id", "submission", "score", "generated_at")
     readonly_fields = ("generated_at",)

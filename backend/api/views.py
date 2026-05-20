@@ -1,13 +1,15 @@
-import os, json, logging
+from .serializers import ExamListSerializer, ExamDetailSerializer, FeedbackSerializer
+from .models import Exam, Question, Alternative, Submission, Feedback
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework import generics, status
+from openai import OpenAI
+import os
+import json
+import logging
 from dotenv import load_dotenv
 load_dotenv()
 
-from openai import OpenAI
-from rest_framework import generics, status
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from .models import Exam, Question, Alternative, Submission, Feedback
-from .serializers import ExamListSerializer, ExamDetailSerializer, FeedbackSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +22,7 @@ FEEDBACK_SYSTEM_PROMPT = (
     '  "score": float 0-10,\n'
     '  "key_strengths": string,\n'
     '  "areas_for_improvement": string,\n'
-    '  "constructive_feedback": string\n'
-)
+    '  "constructive_feedback": string\n')
 
 GENERATION_SYSTEM_PROMPT = (
     "Você é um especialista em criação de avaliações educacionais brasileiras.\n"
@@ -30,8 +31,7 @@ GENERATION_SYSTEM_PROMPT = (
     "Responda SOMENTE em JSON válido (sem markdown) com o seguinte formato:\n"
     '{"questions": [{"statement": "...", "rubric": "resposta esperada e critérios", '
     '"question_type": "dissertativa|fechada", "difficulty": "facil|medio|dificil", '
-    '"alternatives": [{"letter":"A","text":"...","is_correct":false}]}]}'
-)
+    '"alternatives": [{"letter":"A","text":"...","is_correct":false}]}]}')
 
 
 def call_openai(system_prompt, user_prompt, temperature=0.7):
@@ -41,7 +41,7 @@ def call_openai(system_prompt, user_prompt, temperature=0.7):
         temperature=temperature,
         messages=[
             {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": user_prompt},
+            {"role": "user", "content": user_prompt},
         ],
     )
     raw = resp.choices[0].message.content
@@ -52,7 +52,7 @@ def call_openai(system_prompt, user_prompt, temperature=0.7):
     return json.loads(raw)
 
 
-# ─── Listagem de provas (aluno) ───────────────────────────────────────────────
+# ─── Listagem de provas (aluno) ─────────────────────────────────────────
 
 class ExamListView(generics.ListAPIView):
     queryset = Exam.objects.filter(is_active=True).order_by("-created_at")
@@ -64,14 +64,14 @@ class ExamDetailView(generics.RetrieveAPIView):
     serializer_class = ExamDetailSerializer
 
 
-# ─── Geração de prova com IA (professor — chamado pelo wizard do admin) ───────
+# ─── Geração de prova com IA (professor — chamado pelo wizard do admin) ─
 
 class GenerateExamView(APIView):
     """POST /api/generate-exam/  →  retorna JSON com questões geradas (sem salvar)."""
 
     def post(self, request):
-        title          = request.data.get("title", "").strip()
-        subject        = request.data.get("subject", "").strip()
+        title = request.data.get("title", "").strip()
+        subject = request.data.get("subject", "").strip()
         questions_specs = request.data.get("questions_specs", [])
 
         if not title or not questions_specs:
@@ -82,9 +82,9 @@ class GenerateExamView(APIView):
         for i, spec in enumerate(questions_specs, 1):
             specs_text += (
                 f"Questão {i}:\n"
-                f"  - Tema/Conteúdo: {spec.get('content','')}\n"
-                f"  - Dificuldade: {spec.get('difficulty','medio')}\n"
-                f"  - Tipo: {spec.get('type','dissertativa')}\n\n"
+                f"  - Tema/Conteúdo: {spec.get('content', '')}\n"
+                f"  - Dificuldade: {spec.get('difficulty', 'medio')}\n"
+                f"  - Tipo: {spec.get('type', 'dissertativa')}\n\n"
             )
 
         user_prompt = (
@@ -93,7 +93,10 @@ class GenerateExamView(APIView):
         )
 
         try:
-            data = call_openai(GENERATION_SYSTEM_PROMPT, user_prompt, temperature=0.8)
+            data = call_openai(
+                GENERATION_SYSTEM_PROMPT,
+                user_prompt,
+                temperature=0.8)
             return Response(data, status=status.HTTP_200_OK)
         except Exception as e:
             logger.exception("Erro na geração: %s", e)
@@ -101,22 +104,26 @@ class GenerateExamView(APIView):
                             status=status.HTTP_502_BAD_GATEWAY)
 
 
-# ─── Salvar prova gerada ───────────────────────────────────────────────────────
+# ─── Salvar prova gerada ────────────────────────────────────────────────
 
 class SaveExamView(APIView):
     """POST /api/save-exam/  →  persiste Exam + Questions + Alternatives."""
 
     def post(self, request):
-        title     = request.data.get("title", "").strip()
-        subject   = request.data.get("subject", "").strip()
-        desc      = request.data.get("description", "").strip()
+        title = request.data.get("title", "").strip()
+        subject = request.data.get("subject", "").strip()
+        desc = request.data.get("description", "").strip()
         questions = request.data.get("questions", [])
 
         if not title or not questions:
             return Response({"error": "title e questions são obrigatórios."},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        exam = Exam.objects.create(title=title, subject=subject, description=desc, is_active=True)
+        exam = Exam.objects.create(
+            title=title,
+            subject=subject,
+            description=desc,
+            is_active=True)
 
         for i, q_data in enumerate(questions, 1):
             q = Question.objects.create(
@@ -130,15 +137,16 @@ class SaveExamView(APIView):
             for alt in q_data.get("alternatives", []):
                 Alternative.objects.create(
                     question=q,
-                    letter=alt.get("letter","A"),
-                    text=alt.get("text",""),
+                    letter=alt.get("letter", "A"),
+                    text=alt.get("text", ""),
                     is_correct=alt.get("is_correct", False),
                 )
 
-        return Response({"id": exam.id, "title": exam.title}, status=status.HTTP_201_CREATED)
+        return Response({"id": exam.id, "title": exam.title},
+                        status=status.HTTP_201_CREATED)
 
 
-# ─── Submissão + Feedback IA ──────────────────────────────────────────────────
+# ─── Submissão + Feedback IA ────────────────────────────────────────────
 
 class SubmitAnswerView(APIView):
     """POST /api/submissions/  →  grava resposta e retorna feedback da IA."""
@@ -146,16 +154,19 @@ class SubmitAnswerView(APIView):
     def post(self, request):
         question_id = request.data.get("question_id")
         answer_text = request.data.get("answer_text", "").strip()
-        exam_id     = request.data.get("exam_id")
+        exam_id = request.data.get("exam_id")
 
         if not question_id or not answer_text:
-            return Response({"error": "'question_id' e 'answer_text' são obrigatórios."},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "'question_id' e 'answer_text' são obrigatórios."},
+                status=status.HTTP_400_BAD_REQUEST)
 
         try:
             question = Question.objects.get(id=question_id)
         except Question.DoesNotExist:
-            return Response({"error": "Questão não encontrada."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Questão não encontrada."},
+                            status=status.HTTP_404_NOT_FOUND)
 
         exam = None
         if exam_id:
@@ -176,7 +187,10 @@ class SubmitAnswerView(APIView):
         )
 
         try:
-            ai = call_openai(FEEDBACK_SYSTEM_PROMPT, user_prompt, temperature=0.4)
+            ai = call_openai(
+                FEEDBACK_SYSTEM_PROMPT,
+                user_prompt,
+                temperature=0.4)
         except Exception as e:
             logger.exception("Erro no feedback: %s", e)
             return Response({"error": "Serviço de IA indisponível."},
@@ -190,4 +204,6 @@ class SubmitAnswerView(APIView):
             constructive_feedback=ai.get("constructive_feedback", ""),
         )
 
-        return Response(FeedbackSerializer(feedback).data, status=status.HTTP_201_CREATED)
+        return Response(
+            FeedbackSerializer(feedback).data,
+            status=status.HTTP_201_CREATED)
