@@ -1,98 +1,175 @@
-# 🎓 TrAI Questions (Plataforma de Avaliação Inteligente)
+# 🎓 TrAI Questions — Plataforma de Avaliação com IA
 
-Uma plataforma educacional inovadora que automatiza a correção de questões discursivas utilizando Inteligência Artificial (Large Language Models). O sistema compara a resposta do aluno com uma "Rubrica Secreta" definida pelo professor e gera feedback instantâneo, estruturado e pedagógico.
+Plataforma educacional que automatiza a **criação de provas** e a **correção de respostas** utilizando Inteligência Artificial (OpenAI GPT). O professor configura as provas pelo painel administrativo; a IA gera as questões, corrige as respostas dos alunos e entrega feedback pedagógico instantâneo.
 
-## 🚀 Principais Funcionalidades
+🔗 **Frontend (aluno):** https://app-frontend-7nug.onrender.com  
+🔗 **Backend / Admin (professor):** https://app-backend-3bsg.onrender.com/admin/
 
-- **Correção Baseada em Rubricas:** A IA avalia as respostas estritamente com base nos critérios cadastrados pelo professor, minimizando alucinações e garantindo o rigor académico.
-- **Feedback Multicritério:** Retorno detalhado categorizado em "Nota", "Pontos Fortes", "Pontos a Melhorar" e "Comentário do Professor".
-- **Integração LLM Resiliente:** Comunicação direta com a API da OpenAI (ChatGPT), com tratamento de erros (HTTP 503) para indisponibilidade de rede ou falhas na API.
-- **Painel Administrativo:** Gestão completa de questões, submissões e rubricas através do Django Admin.
+---
 
-## 🛠️ Tecnologias Utilizadas
+## 🚀 Funcionalidades
 
-**Frontend:**
-- [React 18](https://reactjs.org/) (com Vite)
-- JavaScript / JSX
-- Integração de API via Axios
+- **Geração de provas com IA:** o professor informa título, disciplina e especificações por questão; a IA gera enunciados, rubricas e alternativas automaticamente.
+- **Correção baseada em rubricas:** a IA avalia a resposta do aluno comparando com a rubrica secreta definida na geração, minimizando alucinações.
+- **Feedback multicritério:** nota (0–10), pontos fortes, pontos a melhorar e comentário construtivo.
+- **Suporte a múltiplos tipos:** questões fechadas (múltipla escolha, 4 alternativas) e dissertativas.
+- **Painel administrativo:** gestão completa de provas, questões, submissões e feedbacks via Django Admin.
+- **Histórico persistente:** todas as submissões e feedbacks ficam salvos no banco de dados.
 
-**Backend:**
-- [Python 3](https://www.python.org/)
-- [Django 5](https://www.djangoproject.com/) & Django REST Framework
-- SQLite (Base de dados padrão)
-- Python-dotenv (Gestão de variáveis de ambiente)
+---
 
-**Inteligência Artificial:**
-- OpenAI API (`gpt-3.5-turbo` / `gpt-4o`)
-- Engenharia de Prompts com *Direct Context Injection* e *Format Forcing* (retorno estrito em JSON).
+## 🛠️ Tecnologias
 
-## ⚙️ Arquitetura e Fluxo de Dados
+| Camada | Tecnologia |
+|---|---|
+| Frontend | React 18 + Vite, Axios |
+| Backend | Python 3.10, Django 5, Django REST Framework |
+| IA | OpenAI API (`gpt-3.5-turbo`) |
+| Banco de dados | SQLite |
+| Deploy | Render (Blueprint via `render.yaml`) |
 
-1. **Entrada:** O aluno envia a sua resposta dissertativa através do Frontend (React).
-2. **Processamento:** O Backend (Django) recebe o pedido, procura o enunciado e a rubrica correspondente na base de dados.
-3. **Inferência:** O servidor monta um prompt dinâmico e aciona a API da OpenAI.
-4. **Persistência:** A IA devolve um JSON estruturado. O sistema guarda a nota e o feedback na base de dados para manter o histórico.
-5. **Apresentação:** O Frontend recebe os dados processados e exibe os cartões de avaliação para o aluno em tempo real.
+---
 
-## 💻 Como executar o projeto localmente
+## ⚙️ Arquitetura e Fluxo
 
-Siga as instruções abaixo para executar os dois ambientes (Backend e Frontend) na sua máquina.
+```
+Professor (Admin)
+   │
+   ├─► Wizard de criação → POST /api/generate-exam/ → OpenAI (gera questões)
+   └─► Salva prova       → POST /api/save-exam/
+
+Aluno (Frontend)
+   │
+   ├─► Lista provas → GET /api/exams/
+   ├─► Detalha prova → GET /api/exams/{id}/
+   └─► Responde questão → POST /api/submissions/ → OpenAI (corrige) → Feedback
+```
+
+---
+
+## 💻 Como executar localmente
 
 ### Pré-requisitos
-- Python 3.x
-- Node.js (v18+)
+- Python 3.10+
+- Node.js 18+
+- Chave de API da OpenAI (`sk-proj-...`)
 
-### Passo 1: Configurar o Backend (Django)
+---
 
-Abra um terminal e aceda à pasta `backend`:
+### Passo 1 — Backend (Django)
+
 ```bash
 cd backend
-Crie um ambiente virtual e ative-o (opcional, mas recomendado):
+```
 
-Bash
+Crie e ative o ambiente virtual:
+
+```bash
 python -m venv venv
-# No Windows: venv\Scripts\activate
-# No Mac/Linux: source venv/bin/activate
-Instale as dependências necessárias:
 
-Bash
-pip install django djangorestframework django-cors-headers openai python-dotenv
-Configuração da Chave de API:
-Crie um ficheiro chamado .env na pasta backend (junto ao manage.py).
-Nota: Por questões de segurança, este ficheiro está ignorado no GitHub e não é partilhado publicamente.
-Insira a sua chave válida da OpenAI no ficheiro recém-criado:
+# Windows
+venv\Scripts\activate
 
-Snippet de código
-OPENAI_API_KEY="sk-SUA_CHAVE_AQUI"
-Execute as migrações da base de dados e inicie o servidor:
+# Mac/Linux
+source venv/bin/activate
+```
 
-Bash
+Instale as dependências:
+
+```bash
+pip install -r requirements.txt
+```
+
+Crie o arquivo `.env` dentro da pasta `backend` (junto ao `manage.py`):
+
+```env
+OPENAI_API_KEY=sk-SUA_CHAVE_AQUI
+```
+
+Execute as migrações e inicie o servidor:
+
+```bash
 python manage.py migrate
-python manage.py createsuperuser # (Opcional) Para aceder ao painel de administração
+python manage.py createsuperuser
 python manage.py runserver
-O backend estará a correr em http://localhost:8000
 ```
 
-### Passo 2: Configurar o Frontend (React/Vite)
-Abra um novo terminal (mantenha o backend a correr em segundo plano) e aceda à pasta `frontend`:
-```
-Bash
+Backend disponível em: http://localhost:8000  
+Painel admin em: http://localhost:8000/admin/
+
+---
+
+### Passo 2 — Frontend (React/Vite)
+
+Abra um **novo terminal** (mantenha o backend rodando):
+
+```bash
 cd frontend
-Instale as dependências do Node:
-
-Bash
 npm install
-Inicie o servidor de desenvolvimento:
-
-Bash
 npm run dev
-O frontend estará acessível em http://localhost:5173
 ```
 
-🔒 Segurança e Boas Práticas
+Frontend disponível em: http://localhost:5173
 
-* Proteção de Credenciais: As chaves de API nunca são expostas ao cliente ou publicadas no repositório (protegidas via ficheiro .env).
+---
 
-* Resiliência: Tratamento de exceções implementado no servidor para evitar quebras totais da aplicação devido a falhas de serviços de terceiros.
+## 🔑 Variáveis de Ambiente
 
-Desenvolvido como Projeto Integrador.
+### Backend (`backend/.env`)
+
+| Variável | Descrição | Obrigatória |
+|---|---|---|
+| `OPENAI_API_KEY` | Chave de API da OpenAI | ✅ Sim |
+| `SECRET_KEY` | Chave secreta do Django (gerada automaticamente no Render) | ✅ Sim (produção) |
+| `RENDER` | Setar como `true` para desativar o DEBUG em produção | ✅ Sim (produção) |
+
+### Frontend (`frontend/.env`)
+
+| Variável | Descrição | Obrigatória |
+|---|---|---|
+| `VITE_API_URL` | URL base da API do backend | ✅ Sim (produção) |
+
+Exemplo:
+```env
+VITE_API_URL=https://app-backend-3bsg.onrender.com/api
+```
+
+---
+
+## 🌐 Deploy (Render)
+
+O arquivo `render.yaml` na raiz do projeto configura automaticamente os dois serviços (backend Python e frontend estático).
+
+**Passos:**
+1. Faça fork/clone do repositório para sua conta GitHub
+2. Acesse [render.com](https://render.com) → **New Blueprint**
+3. Conecte o repositório
+4. Após criar os serviços, vá em **app-backend → Environment** e adicione manualmente:
+   - `OPENAI_API_KEY` = sua chave da OpenAI
+5. Aguarde o redeploy automático
+
+> ⚠️ A `OPENAI_API_KEY` deve ser adicionada manualmente no painel do Render por segurança — o GitHub bloqueia o envio de chaves de API em arquivos públicos.
+
+---
+
+## 🔒 Segurança
+
+- Chaves de API protegidas via `.env` (ignorado pelo `.gitignore`)
+- `SECRET_KEY` do Django gerada automaticamente pelo Render (`generateValue: true`)
+- `DEBUG=False` em produção (detectado via variável `RENDER`)
+- CORS restrito ao domínio do frontend em produção
+- `ALLOWED_HOSTS` restrito ao domínio do backend
+
+---
+
+## 🤖 Engenharia de Prompt
+
+Dois prompts de sistema sustentam o core da aplicação, ambos em [`backend/api/views.py`](backend/api/views.py):
+
+**Geração de provas** (`temperature=0.8`): instrui a IA a criar questões no formato JSON estrito com enunciado, rubrica, tipo e alternativas.
+
+**Correção de respostas** (`temperature=0.4`): instrui a IA a agir como professor tutor, avaliar com base na rubrica e retornar nota e feedback em JSON, sem revelar a resposta ao aluno.
+
+---
+
+Desenvolvido como Projeto Integrador — TrAI Questions.
