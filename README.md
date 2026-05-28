@@ -164,12 +164,10 @@ O arquivo `render.yaml` na raiz do projeto configura automaticamente os dois ser
 
 ## 🤖 Engenharia de Prompt
 
-Dois prompts de sistema sustentam o core da aplicação, ambos em [`backend/api/views.py`](backend/api/views.py):
+O ecossistema de inteligência artificial da plataforma foi desenvolvido com foco em robustez estrutural e rastreabilidade técnica. A documentação completa exigida pelo edital foi dividida para melhor legibilidade:
 
-**Geração de provas** (`temperature=0.8`): instrui a IA a criar questões no formato JSON estrito com enunciado, rubrica, tipo e alternativas.
-
-**Correção de respostas** (`temperature=0.4`): instrui a IA a agir como professor tutor, avaliar com base na rubrica e retornar nota e feedback em JSON, sem revelar a resposta ao aluno.
-
+* 📄 [**Documentação de Integrações e Rastreabilidade (Itens 1.2 e 1.4)**](./PROMPTS.md)
+* 📄 [**Relatório de Prompts que Falharam (Item 1.5)**](./FALHAS.md)
 ---
 
 Desenvolvido como Projeto Integrador — TrAI Questions.
