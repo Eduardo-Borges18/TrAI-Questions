@@ -170,4 +170,4 @@ O ecossistema de inteligência artificial da plataforma foi desenvolvido com foc
 * 📄 [**Relatório de Prompts que Falharam (Item 1.5)**](./FALHAS.md)
 ---
 
-Desenvolvido como Projeto Integrador — TrAI Questions.
+Desenvolvido como Projeto Integrador — TrAI Questions pela Squad16 (Andrews, Arthur, Diogo, Eduardo e Eliziane).
